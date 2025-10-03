@@ -7,6 +7,7 @@ import (
 	"github.com/roxensox/chirpy/internal/database"
 	"log"
 	"net/http"
+	"sort"
 	"time"
 )
 
@@ -100,25 +101,35 @@ func (cfg *ApiConfig) GETChirps(writer http.ResponseWriter, req *http.Request) {
 	// Declares variables used in conditional scope
 	var allChirps []database.Chirp
 	var err error
-	var auth_uuid *uuid.UUID
+	var auth_uuid uuid.UUID
 
 	// Proceeds as usual if no ID is provided
 	if auth_id != "" {
 		// Parses author ID to UUID
-		id, err := uuid.Parse(auth_id)
+		auth_uuid, err = uuid.Parse(auth_id)
 		if err != nil {
 			http.Error(writer, "Invalid author ID", http.StatusBadRequest)
 			return
 		}
-		// Assigns auth_uuid with the parsed uuid's memory address
-		auth_uuid = &id
+
+		allChirps, err = cfg.DBConn.GetChirpsByAuthor(req.Context(), auth_uuid)
+		if err != nil {
+			http.Error(writer, "Unable to get chirps", http.StatusInternalServerError)
+			return
+		}
+	} else {
+		// Queries the DB with nullable auth_uuid
+		allChirps, err = cfg.DBConn.GetChirps(req.Context())
+		if err != nil {
+			http.Error(writer, "Unable to get chirps", http.StatusInternalServerError)
+			return
+		}
 	}
 
-	// Queries the DB with nullable auth_uuid
-	allChirps, err = cfg.DBConn.GetChirps(req.Context(), *auth_uuid)
-	if err != nil {
-		http.Error(writer, "Unable to get chirps", http.StatusInternalServerError)
-		return
+	if req.URL.Query().Get("sort") == "desc" {
+		sort.Slice(allChirps, func(i, j int) bool {
+			return allChirps[i].CreatedAt.After(allChirps[j].CreatedAt)
+		})
 	}
 
 	// Iterates through the returned chirps
