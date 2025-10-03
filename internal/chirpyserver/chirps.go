@@ -177,3 +177,60 @@ func (cfg *ApiConfig) GETChirpByID(writer http.ResponseWriter, req *http.Request
 	writer.WriteHeader(200)
 	writer.Write(outJson)
 }
+
+func (cfg *ApiConfig) DELETEChirpByID(writer http.ResponseWriter, req *http.Request) {
+	// Handles DELETE requests at the chirps/{chirpID} endpoint, deleting a chirp by ID
+
+	// Gets the chirp ID as a string from the endpoint
+	chirpID := req.PathValue("chirpID")
+
+	// Reads the ID into a UUID
+	CID, err := uuid.Parse(chirpID)
+	if err != nil {
+		writer.WriteHeader(500)
+		writer.Write([]byte("Unable to parse chirp ID"))
+		return
+	}
+
+	// Queries the chirp from the DB
+	chirp, err := cfg.DBConn.GetExactChirp(req.Context(), CID)
+	if err != nil {
+		writer.WriteHeader(404)
+		writer.Write([]byte("Chirp not found"))
+		return
+	}
+
+	// Gets the access token from the request header
+	tkn, err := auth.GetBearerToken(req.Header)
+	if err != nil {
+		writer.WriteHeader(401)
+		writer.Write([]byte("Token not found"))
+		return
+	}
+
+	// Gets the user's ID by validating the token
+	UID, err := auth.ValidateJWT(tkn, cfg.Secret)
+	if err != nil {
+		writer.WriteHeader(401)
+		writer.Write([]byte("Invalid token"))
+		return
+	}
+
+	// Compares the chirp's user ID with the token's
+	if chirp.UserID != UID {
+		writer.WriteHeader(403)
+		writer.Write([]byte("Unauthorized"))
+		return
+	}
+
+	// Deletes the chirp
+	err = cfg.DBConn.DeleteChirp(req.Context(), CID)
+	if err != nil {
+		writer.WriteHeader(500)
+		writer.Write([]byte("Failed to delete chirp"))
+		return
+	}
+
+	// Writes success response
+	writer.WriteHeader(204)
+}

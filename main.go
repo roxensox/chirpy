@@ -65,6 +65,9 @@ func main() {
 	sMux.HandleFunc("GET /api/chirps", config.GETChirps)
 	sMux.HandleFunc("GET /api/chirps/{chirpID}", config.GETChirpByID)
 
+	// Binds functions to DELETE handlers
+	sMux.HandleFunc("DELETE /api/chirps/{chirpID}", config.DELETEChirpByID)
+
 	// Runs the server
 	server.ListenAndServe()
 }
