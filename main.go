@@ -53,6 +53,8 @@ func main() {
 	sMux.HandleFunc("POST /api/users", config.POSTUsers)
 	sMux.HandleFunc("POST /api/chirps", config.POSTChirps)
 	sMux.HandleFunc("POST /api/login", config.POSTLogin)
+	sMux.HandleFunc("POST /api/refresh", config.POSTRefresh)
+	sMux.HandleFunc("POST /api/revoke", config.POSTRevoke)
 
 	// Binds functions to GET handlers
 	sMux.HandleFunc("GET /api/healthz", chirpyserver.Healthz)
