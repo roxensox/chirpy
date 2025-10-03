@@ -91,26 +91,61 @@ func (cfg *ApiConfig) GETChirps(writer http.ResponseWriter, req *http.Request) {
 	// Initializes an empty slice of Chirp objects
 	out := make([]Chirp, 0)
 
-	// Queries the chirps from the database
-	allChirps, err := cfg.DBConn.GetChirps(req.Context())
-	if err != nil {
-		writer.WriteHeader(500)
-		writer.Write([]byte("Unable to get chirps"))
-		return
-	}
+	// Gets the author ID as a string from the query, if there is one
+	auth_id := req.URL.Query().Get("author_id")
 
-	// Iterates through the returned chirps
-	for _, c := range allChirps {
-		// Casts the db chirps to output object with appropriate JSON fields
-		ctoJSON := Chirp{
-			ID:        c.ID,
-			CreatedAt: c.UpdatedAt,
-			UpdatedAt: c.UpdatedAt,
-			Body:      c.Body,
-			UserID:    c.UserID,
+	// Proceeds as usual if no ID is provided
+	if auth_id == "" {
+		// Queries the chirps from the database
+		allChirps, err := cfg.DBConn.GetChirps(req.Context())
+		if err != nil {
+			writer.WriteHeader(500)
+			writer.Write([]byte("Unable to get chirps"))
+			return
 		}
-		// Adds the chirp to out slice
-		out = append(out, ctoJSON)
+
+		// Iterates through the returned chirps
+		for _, c := range allChirps {
+			// Casts the db chirps to output object with appropriate JSON fields
+			ctoJSON := Chirp{
+				ID:        c.ID,
+				CreatedAt: c.UpdatedAt,
+				UpdatedAt: c.UpdatedAt,
+				Body:      c.Body,
+				UserID:    c.UserID,
+			}
+			// Adds the chirp to out slice
+			out = append(out, ctoJSON)
+		}
+	} else {
+		// Parses author ID to UUID
+		auth_uuid, err := uuid.Parse(auth_id)
+		if err != nil {
+			writer.WriteHeader(500)
+			writer.Write([]byte("Failed to parse author ID to UUID"))
+		}
+
+		// Queries chirps by this author from the database
+		allChirps, err := cfg.DBConn.GetChirpsByAuthor(req.Context(), auth_uuid)
+		if err != nil {
+			writer.WriteHeader(500)
+			writer.Write([]byte("Unable to get chirps"))
+			return
+		}
+
+		// Iterates through the returned chirps
+		for _, c := range allChirps {
+			// Casts the db chirps to output object with appropriate JSON fields
+			ctoJSON := Chirp{
+				ID:        c.ID,
+				CreatedAt: c.UpdatedAt,
+				UpdatedAt: c.UpdatedAt,
+				Body:      c.Body,
+				UserID:    c.UserID,
+			}
+			// Adds the chirp to out slice
+			out = append(out, ctoJSON)
+		}
 	}
 
 	// Marshals the out slice to JSON
