@@ -39,14 +39,6 @@ func (cfg *ApiConfig) POSTChirps(writer http.ResponseWriter, req *http.Request) 
 	decoder := json.NewDecoder(req.Body)
 	decoder.Decode(&inObj)
 
-	// Parses user_id as UUID
-	//user_id, err := uuid.Parse(inObj.UserID)
-	//if err != nil {
-	//writer.WriteHeader(500)
-	//writer.Write([]byte("Failed to parse user ID"))
-	//return
-	//}
-
 	chirpID, err := uuid.NewUUID()
 	if err != nil {
 		writer.WriteHeader(500)

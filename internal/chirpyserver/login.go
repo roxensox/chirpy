@@ -69,6 +69,7 @@ func (cfg *ApiConfig) POSTLogin(writer http.ResponseWriter, req *http.Request) {
 		UpdatedAt:    user.UpdatedAt,
 		Token:        jwt,
 		RefreshToken: ref_token,
+		IsChirpyRed:  user.IsChirpyRed,
 	}
 
 	outJson, err := json.Marshal(out)

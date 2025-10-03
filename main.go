@@ -55,6 +55,7 @@ func main() {
 	sMux.HandleFunc("POST /api/login", config.POSTLogin)
 	sMux.HandleFunc("POST /api/refresh", config.POSTRefresh)
 	sMux.HandleFunc("POST /api/revoke", config.POSTRevoke)
+	sMux.HandleFunc("POST /api/polka/webhooks", config.POSTPolkaWebhooks)
 
 	// Binds functions to PUT handlers
 	sMux.HandleFunc("PUT /api/users", config.PUTUsers)

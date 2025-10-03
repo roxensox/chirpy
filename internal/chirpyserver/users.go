@@ -44,10 +44,11 @@ func (cfg *ApiConfig) POSTUsers(writer http.ResponseWriter, req *http.Request) {
 
 	// Builds new User object to umarshal to JSON
 	jsonResp := User{
-		Email:     dbResp.Email,
-		CreatedAt: dbResp.CreatedAt,
-		UpdatedAt: dbResp.UpdatedAt,
-		ID:        dbResp.ID,
+		Email:       dbResp.Email,
+		CreatedAt:   dbResp.CreatedAt,
+		UpdatedAt:   dbResp.UpdatedAt,
+		ID:          dbResp.ID,
+		IsChirpyRed: dbResp.IsChirpyRed,
 	}
 
 	// Umarshals User object
@@ -118,10 +119,11 @@ func (cfg *ApiConfig) PUTUsers(writer http.ResponseWriter, req *http.Request) {
 
 	// Transfers query response to JSON-able object
 	userObj := User{
-		Email:     resp.Email,
-		ID:        resp.ID,
-		UpdatedAt: resp.UpdatedAt,
-		CreatedAt: resp.CreatedAt,
+		Email:       resp.Email,
+		ID:          resp.ID,
+		UpdatedAt:   resp.UpdatedAt,
+		CreatedAt:   resp.CreatedAt,
+		IsChirpyRed: resp.IsChirpyRed,
 	}
 
 	// Marshals object to JSON
