@@ -3,6 +3,7 @@ package chirpyserver
 import (
 	"encoding/json"
 	"github.com/roxensox/chirpy/internal/auth"
+	"github.com/roxensox/chirpy/internal/database"
 	"net/http"
 	"time"
 )
@@ -12,9 +13,8 @@ func (cfg *ApiConfig) POSTLogin(writer http.ResponseWriter, req *http.Request) {
 
 	// Creates an anonymous struct instance to receive input
 	inObj := struct {
-		Password         string `json:"password"`
-		Email            string `json:"email"`
-		ExpiresInSeconds int    `json:"expires_in_seconds"`
+		Password string `json:"password"`
+		Email    string `json:"email"`
 	}{}
 
 	// Creates a new decoder and decodes the request body into struct
@@ -38,22 +38,37 @@ func (cfg *ApiConfig) POSTLogin(writer http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	t := func() time.Duration {
-		secs := time.Duration(inObj.ExpiresInSeconds)
-		if inObj.ExpiresInSeconds == 0 || secs*time.Second > time.Hour {
-			return time.Hour
-		}
-		return secs * time.Second
-	}()
+	jwt, err := auth.MakeJWT(user.ID, cfg.Secret, time.Hour)
 
-	tkn, err := auth.MakeJWT(user.ID, cfg.Secret, t)
+	ref_token, err := auth.MakeRefreshToken()
+	if err != nil {
+		writer.WriteHeader(500)
+		writer.Write([]byte("Failed to generate refresh token"))
+		return
+	}
+
+	refTokenParams := database.AddRefreshTokenParams{
+		UserID:    user.ID,
+		Token:     ref_token,
+		CreatedAt: time.Now().UTC(),
+		UpdatedAt: time.Now().UTC(),
+		ExpiresAt: time.Now().UTC().Add(60 * 24 * time.Hour),
+	}
+
+	err = cfg.DBConn.AddRefreshToken(req.Context(), refTokenParams)
+	if err != nil {
+		writer.WriteHeader(500)
+		writer.Write([]byte("Failed to add refresh token"))
+		return
+	}
 
 	out := User{
-		Email:     user.Email,
-		ID:        user.ID,
-		CreatedAt: user.CreatedAt,
-		UpdatedAt: user.UpdatedAt,
-		Token:     tkn,
+		Email:        user.Email,
+		ID:           user.ID,
+		CreatedAt:    user.CreatedAt,
+		UpdatedAt:    user.UpdatedAt,
+		Token:        jwt,
+		RefreshToken: ref_token,
 	}
 
 	outJson, err := json.Marshal(out)
