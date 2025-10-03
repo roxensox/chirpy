@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
+	"net/http"
+	"strings"
 	"time"
 )
 
@@ -60,4 +62,13 @@ func ValidateJWT(tokenString string, tokenSecret string) (uuid.UUID, error) {
 		return uuid.UUID{}, fmt.Errorf("Failed to assert claims type")
 	}
 	return uuid.UUID{}, fmt.Errorf("Invalid token")
+}
+
+func GetBearerToken(headers http.Header) (string, error) {
+	token := headers.Get("Authorization")
+	if token == "" {
+		return token, fmt.Errorf("Token not found")
+	}
+	tknFields := strings.Fields(token)
+	return tknFields[1], nil
 }

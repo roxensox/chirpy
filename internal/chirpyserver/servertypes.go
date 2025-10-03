@@ -10,6 +10,7 @@ import (
 type ApiConfig struct {
 	FileserverHits atomic.Int32
 	DBConn         *database.Queries
+	Secret         string
 }
 
 type ValidateResponse struct {
@@ -31,4 +32,5 @@ type User struct {
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 	ID        uuid.UUID `json:"id"`
+	Token     string    `json:"token"`
 }

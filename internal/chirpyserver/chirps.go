@@ -3,7 +3,9 @@ package chirpyserver
 import (
 	"encoding/json"
 	"github.com/google/uuid"
+	"github.com/roxensox/chirpy/internal/auth"
 	"github.com/roxensox/chirpy/internal/database"
+	"log"
 	"net/http"
 	"time"
 )
@@ -17,25 +19,48 @@ func (cfg *ApiConfig) POSTChirps(writer http.ResponseWriter, req *http.Request) 
 		UserID string `json:"user_id"`
 	}{}
 
+	tkn, err := auth.GetBearerToken(req.Header)
+	if err != nil {
+		writer.WriteHeader(401)
+		writer.Write([]byte("Must be logged in"))
+		return
+	}
+
+	UID, err := auth.ValidateJWT(tkn, cfg.Secret)
+	if err != nil {
+		writer.WriteHeader(401)
+		writer.Write([]byte("Unauthorized"))
+		log.Println(err)
+		log.Println(tkn)
+		return
+	}
+
 	// Creates a JSON decoder for the request and decodes it into inObj
 	decoder := json.NewDecoder(req.Body)
 	decoder.Decode(&inObj)
 
 	// Parses user_id as UUID
-	user_id, err := uuid.Parse(inObj.UserID)
+	//user_id, err := uuid.Parse(inObj.UserID)
+	//if err != nil {
+	//writer.WriteHeader(500)
+	//writer.Write([]byte("Failed to parse user ID"))
+	//return
+	//}
+
+	chirpID, err := uuid.NewUUID()
 	if err != nil {
 		writer.WriteHeader(500)
-		writer.Write([]byte("Failed to parse user ID"))
+		writer.Write([]byte("Failed to generate post ID"))
 		return
 	}
 
 	// Builds query param object
 	params := database.CreateChirpParams{
-		UserID:    user_id,
+		UserID:    UID,
 		Body:      inObj.Body,
 		CreatedAt: time.Now().UTC(),
 		UpdatedAt: time.Now().UTC(),
-		ID:        uuid.New(),
+		ID:        chirpID,
 	}
 
 	// Queries the database to insert parameters

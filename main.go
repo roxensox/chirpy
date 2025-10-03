@@ -29,6 +29,7 @@ func main() {
 	dbQueries := database.New(db)
 	config := chirpyserver.ApiConfig{
 		DBConn: dbQueries,
+		Secret: os.Getenv("SECRET"),
 	}
 
 	// Starts a new server mux
