@@ -11,6 +11,7 @@ type ApiConfig struct {
 	FileserverHits atomic.Int32
 	DBConn         *database.Queries
 	Secret         string
+	APIKey         string
 }
 
 type ValidateResponse struct {

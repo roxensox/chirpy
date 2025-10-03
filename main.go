@@ -30,6 +30,7 @@ func main() {
 	config := chirpyserver.ApiConfig{
 		DBConn: dbQueries,
 		Secret: os.Getenv("SECRET"),
+		APIKey: os.Getenv("POLKA_KEY"),
 	}
 
 	// Starts a new server mux

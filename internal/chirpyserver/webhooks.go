@@ -3,11 +3,21 @@ package chirpyserver
 import (
 	"encoding/json"
 	"github.com/google/uuid"
+	"github.com/roxensox/chirpy/internal/auth"
 	"net/http"
 )
 
 func (cfg *ApiConfig) POSTPolkaWebhooks(writer http.ResponseWriter, req *http.Request) {
 	// Handles POST request to polka/webhooks endpoint
+
+	// Gets the API Key from the header
+	apiKey, err := auth.GetAPIKey(req.Header)
+	// Returns error code if API key isn't found or doesn't match config
+	if err != nil || apiKey != cfg.APIKey {
+		writer.WriteHeader(401)
+		writer.Write([]byte("Invalid/Missing API Key"))
+		return
+	}
 
 	// Creates object to receive webhook input
 	rcv := struct {
