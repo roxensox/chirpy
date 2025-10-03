@@ -93,14 +93,16 @@ const updateUser = `-- name: UpdateUser :one
 UPDATE users
 SET 
 	email = $1,
-	hashed_password = $2
-WHERE id = $3
+	hashed_password = $2,
+	updated_at = $3
+WHERE id = $4
 RETURNING id, email, created_at, updated_at
 `
 
 type UpdateUserParams struct {
 	Email          string
 	HashedPassword string
+	UpdatedAt      time.Time
 	ID             uuid.UUID
 }
 
@@ -112,7 +114,12 @@ type UpdateUserRow struct {
 }
 
 func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (UpdateUserRow, error) {
-	row := q.db.QueryRowContext(ctx, updateUser, arg.Email, arg.HashedPassword, arg.ID)
+	row := q.db.QueryRowContext(ctx, updateUser,
+		arg.Email,
+		arg.HashedPassword,
+		arg.UpdatedAt,
+		arg.ID,
+	)
 	var i UpdateUserRow
 	err := row.Scan(
 		&i.ID,

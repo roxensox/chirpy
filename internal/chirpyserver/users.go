@@ -62,3 +62,77 @@ func (cfg *ApiConfig) POSTUsers(writer http.ResponseWriter, req *http.Request) {
 	writer.WriteHeader(201)
 	writer.Write(resp)
 }
+
+func (cfg *ApiConfig) PUTUsers(writer http.ResponseWriter, req *http.Request) {
+	// Handles PUT requests at users endpoint, takes in new email and password
+
+	// Gets access token from request header
+	tkn, err := auth.GetBearerToken(req.Header)
+	if err != nil {
+		writer.WriteHeader(401)
+		writer.Write([]byte("Could not find token"))
+		return
+	}
+
+	// Gets the user ID by validating access token
+	UID, err := auth.ValidateJWT(tkn, cfg.Secret)
+	if err != nil {
+		writer.WriteHeader(401)
+		writer.Write([]byte("Invalid token"))
+		return
+	}
+
+	// Prepares object to receive request body
+	rcv := struct {
+		Password string `json:"password"`
+		Email    string `json:"email"`
+	}{}
+
+	// Decodes request body into object
+	decoder := json.NewDecoder(req.Body)
+	decoder.Decode(&rcv)
+
+	// Hashes the new password
+	hashed, err := auth.HashPassword(rcv.Password)
+	if err != nil {
+		writer.WriteHeader(500)
+		writer.Write([]byte("Unable to hash password"))
+		return
+	}
+
+	// Prepares parameteres object for the query
+	params := database.UpdateUserParams{
+		Email:          rcv.Email,
+		HashedPassword: hashed,
+		UpdatedAt:      time.Now().UTC(),
+		ID:             UID,
+	}
+
+	// Runs the query
+	resp, err := cfg.DBConn.UpdateUser(req.Context(), params)
+	if err != nil {
+		writer.WriteHeader(500)
+		writer.Write([]byte("Failed to update user"))
+		return
+	}
+
+	// Transfers query response to JSON-able object
+	userObj := User{
+		Email:     resp.Email,
+		ID:        resp.ID,
+		UpdatedAt: resp.UpdatedAt,
+		CreatedAt: resp.CreatedAt,
+	}
+
+	// Marshals object to JSON
+	userJson, err := json.Marshal(userObj)
+	if err != nil {
+		writer.WriteHeader(500)
+		writer.Write([]byte("Failed to marshal output"))
+		return
+	}
+
+	// Writes success response
+	writer.WriteHeader(200)
+	writer.Write(userJson)
+}
