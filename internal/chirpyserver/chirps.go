@@ -88,71 +88,57 @@ func (cfg *ApiConfig) POSTChirps(writer http.ResponseWriter, req *http.Request) 
 func (cfg *ApiConfig) GETChirps(writer http.ResponseWriter, req *http.Request) {
 	// Handles a GET request to the chirps endpoint, returns all chirps
 
+	// Sets content type in header
+	writer.Header().Set("Content-Type", "application/json")
+
 	// Initializes an empty slice of Chirp objects
 	out := make([]Chirp, 0)
 
 	// Gets the author ID as a string from the query, if there is one
 	auth_id := req.URL.Query().Get("author_id")
 
+	// Declares variables used in conditional scope
+	var allChirps []database.Chirp
+	var err error
+	var auth_uuid *uuid.UUID
+
 	// Proceeds as usual if no ID is provided
-	if auth_id == "" {
-		// Queries the chirps from the database
-		allChirps, err := cfg.DBConn.GetChirps(req.Context())
-		if err != nil {
-			writer.WriteHeader(500)
-			writer.Write([]byte("Unable to get chirps"))
-			return
-		}
-
-		// Iterates through the returned chirps
-		for _, c := range allChirps {
-			// Casts the db chirps to output object with appropriate JSON fields
-			ctoJSON := Chirp{
-				ID:        c.ID,
-				CreatedAt: c.UpdatedAt,
-				UpdatedAt: c.UpdatedAt,
-				Body:      c.Body,
-				UserID:    c.UserID,
-			}
-			// Adds the chirp to out slice
-			out = append(out, ctoJSON)
-		}
-	} else {
+	if auth_id != "" {
 		// Parses author ID to UUID
-		auth_uuid, err := uuid.Parse(auth_id)
+		id, err := uuid.Parse(auth_id)
 		if err != nil {
-			writer.WriteHeader(500)
-			writer.Write([]byte("Failed to parse author ID to UUID"))
-		}
-
-		// Queries chirps by this author from the database
-		allChirps, err := cfg.DBConn.GetChirpsByAuthor(req.Context(), auth_uuid)
-		if err != nil {
-			writer.WriteHeader(500)
-			writer.Write([]byte("Unable to get chirps"))
+			http.Error(writer, "Invalid author ID", http.StatusBadRequest)
 			return
 		}
+		// Assigns auth_uuid with the parsed uuid's memory address
+		auth_uuid = &id
+	}
 
-		// Iterates through the returned chirps
-		for _, c := range allChirps {
-			// Casts the db chirps to output object with appropriate JSON fields
-			ctoJSON := Chirp{
-				ID:        c.ID,
-				CreatedAt: c.UpdatedAt,
-				UpdatedAt: c.UpdatedAt,
-				Body:      c.Body,
-				UserID:    c.UserID,
-			}
-			// Adds the chirp to out slice
-			out = append(out, ctoJSON)
+	// Queries the DB with nullable auth_uuid
+	allChirps, err = cfg.DBConn.GetChirps(req.Context(), *auth_uuid)
+	if err != nil {
+		http.Error(writer, "Unable to get chirps", http.StatusInternalServerError)
+		return
+	}
+
+	// Iterates through the returned chirps
+	for _, c := range allChirps {
+		// Casts the db chirps to output object with appropriate JSON fields
+		ctoJSON := Chirp{
+			ID:        c.ID,
+			CreatedAt: c.UpdatedAt,
+			UpdatedAt: c.UpdatedAt,
+			Body:      c.Body,
+			UserID:    c.UserID,
 		}
+		// Adds the chirp to out slice
+		out = append(out, ctoJSON)
 	}
 
 	// Marshals the out slice to JSON
 	outJson, err := json.Marshal(out)
 	if err != nil {
-		writer.WriteHeader(500)
-		writer.Write([]byte("Failed to marshal data"))
+		http.Error(writer, "Failed to marshal data", http.StatusInternalServerError)
 		return
 	}
 
